@@ -17,7 +17,6 @@ LOGGER = logging.getLogger('luigi-interface')
 class TuneModelParameters(ConfigurableTask):
     def __init__(self):
         self.best_estimator_per_model = []
-        self.cv_results_df = pd.DataFrame({})
         super(TuneModelParameters, self).__init__()
 
     def requires(self):
@@ -45,10 +44,6 @@ class TuneModelParameters(ConfigurableTask):
 
             grid_search = self.do_grid_search(model, X_train, y_train)
             self.best_model_per_model_type(model, grid_search)
-
-        # Delete unnecessary columns and save
-        self.cv_results_df = self.cv_results_df[[col for col in self.cv_results_df.columns if 'param_' not in col]]
-        utils.save_data(self.cv_results_df, self.output()['cv_output'].path)
 
         # Save best models
         utils.save_data(self.best_estimator_per_model, self.output()['model_package'].path)
