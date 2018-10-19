@@ -3,4 +3,4 @@ A machine learning pipeline for Kaggle's [Titanic problem](https://www.kaggle.co
 
 Run ```pipeline\main.py``` to execute pipeline. 
 
-```train.csv``` and ```test.csv``` goes under ```\data```.
+```train.csv``` and ```test.csv``` goes under ```data\```.
