@@ -1,0 +1,51 @@
+# Pipeline configuration.
+data_repository: "results"
+
+luigi_worker_count: 3
+local_scheduler: true
+log_level: "INFO"
+
+# Models
+n_folds: 3
+sklearn_estimators:
+  -
+    estimator_type: "RandomForestClassifier"
+    estimator: "sklearn.ensemble.RandomForestClassifier"
+    scorer: "accuracy"
+    parameter_values:
+      criterion: ["gini", "entropy"]
+      n_estimators: [100, 300, 400, 500, 700]
+      min_samples_split: [10, 20]
+      min_samples_leaf: [5, 8, 10]
+      min_impurity_decrease: [0, 0.05]
+      max_depth: [3, 5, 10]
+
+  -
+    estimator_type: "GradientBoostingClassifier"
+    estimator: "sklearn.ensemble.GradientBoostingClassifier"
+    scorer: "accuracy"
+    parameter_values:
+      loss: ["deviance", "exponential"]
+      criterion: ["mse", "friedman_mse"]
+      n_estimators: [5, 10, 20, 50]
+      min_samples_split: [5, 10, 20]
+      min_samples_leaf: [5, 8, 10]
+      min_impurity_decrease: [0.05, 0.1]
+
+  -
+    estimator_type: "MLPClassifier"
+    estimator: "sklearn.neural_network.MLPClassifier"
+    scorer: "accuracy"
+    parameter_values:
+      activation: ["relu", "logistic"]
+      solver: ["adam", "sgd", "lbfgs"]
+      alpha: [0.0001, 0.0002, 0.0005, 0.001, 0.005]
+
+  -
+    estimator_type: "AdaBoostClassifier"
+    estimator: "sklearn.ensemble.AdaBoostClassifier"
+    scorer: "accuracy"
+    parameter_values:
+      n_estimators: [2, 5, 10, 20, 50]
+      algorithm: ["SAMME","SAMME.R"]
+      learning_rate:  [0.0001, 0.001, 0.01, 0.1, 0.2, 0.3]
