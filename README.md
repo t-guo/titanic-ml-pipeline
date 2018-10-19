@@ -1,2 +1,2 @@
 # titanic-ml-pipeline
-A machine learning pipeline for https://www.kaggle.com/c/titanic
+A machine learning pipeline for Kaggle's [Titanic problem](https://www.kaggle.com/c/titanic).
