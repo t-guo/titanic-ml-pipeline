@@ -40,13 +40,16 @@ class Predict(ConfigurableTask):
         for m in best_individual_models:
             clf = m["best_model"]
             prediction_df = self.make_prediction(clf, X_pred_transformed, pred_data["PassengerId"])
-            utils.save_data(prediction_df,
-                            os.path.join(predict_folder,
-                                         m["model"]["estimator_type"] + "_" + str(m["best_score"]) + ".csv"))
+
+            utils.save_data(
+                prediction_df,
+                os.path.join(predict_folder, m["model"]["estimator_type"] + "_" + str(m["best_score"]) + ".csv")
+            )
 
         if len(self.model["estimators"]) > 1:
             eclf = final_model["final_model"]
             prediction_df = self.make_prediction(eclf, X_pred_transformed, pred_data["PassengerId"])
+
             utils.save_data(prediction_df, os.path.join(predict_folder, "EnsembleClassifier.csv"))
 
         utils.save_data("", self.output()["predictions"].path)

@@ -65,7 +65,7 @@ class OneHotEncoder(BaseEstimator, TransformerMixin):
         return output
 
 
-class NAImputer(BaseEstimator, TransformerMixin):
+class Imputer(BaseEstimator, TransformerMixin):
     def __init__(self, target_col, method="mean", target_value=None, group_col=None):
         self.target_col = target_col
         self.target_value = target_value
@@ -129,59 +129,12 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output["room"] = output["cabin"].str.slice(1, 5).str.extract("([0-9]+)", expand=False).astype("float")
 
         # Impute variables
-        if "age_imputer" not in self.state_dependent_transforms.keys():
-            age_imputer = NAImputer("age", method="mean", group_col=["pclass", "sex", "title"])
-            age_imputer.fit(output)
-            output = age_imputer.transform(output)
-            self.state_dependent_transforms["age_imputer"] = age_imputer
-        else:
-            age_imputer = self.state_dependent_transforms["age_imputer"]
-            output = age_imputer.transform(output)
-
-        if "sibsp_imputer" not in self.state_dependent_transforms.keys():
-            sibsp_imputer = NAImputer("sibsp", method="median")
-            sibsp_imputer.fit(output)
-            output = sibsp_imputer.transform(output)
-            self.state_dependent_transforms["sibsp_imputer"] = sibsp_imputer
-        else:
-            sibsp_imputer = self.state_dependent_transforms["sibsp_imputer"]
-            output = sibsp_imputer.transform(output)
-
-        if "parch_imputer" not in self.state_dependent_transforms.keys():
-            parch_imputer = NAImputer("parch", method="median")
-            parch_imputer.fit(output)
-            output = parch_imputer.transform(output)
-            self.state_dependent_transforms["parch_imputer"] = parch_imputer
-        else:
-            parch_imputer = self.state_dependent_transforms["parch_imputer"]
-            output = parch_imputer.transform(output)
-
-        if "embarked_imputer" not in self.state_dependent_transforms.keys():
-            embarked_imputer = NAImputer("embarked", method="mode")
-            embarked_imputer.fit(output)
-            output = embarked_imputer.transform(output)
-            self.state_dependent_transforms["embarked_imputer"] = embarked_imputer
-        else:
-            embarked_imputer = self.state_dependent_transforms["embarked_imputer"]
-            output = embarked_imputer.transform(output)
-
-        if "room_imputer" not in self.state_dependent_transforms.keys():
-            room_imputer = NAImputer("room", method="median")
-            room_imputer.fit(output)
-            output = room_imputer.transform(output)
-            self.state_dependent_transforms["room_imputer"] = room_imputer
-        else:
-            room_imputer = self.state_dependent_transforms["room_imputer"]
-            output = room_imputer.transform(output)
-
-        if "deck_imputer" not in self.state_dependent_transforms.keys():
-            deck_imputer = NAImputer("deck", method="static", target_value="N")
-            deck_imputer.fit(output)
-            output = deck_imputer.transform(output)
-            self.state_dependent_transforms["deck_imputer"] = deck_imputer
-        else:
-            deck_imputer = self.state_dependent_transforms["deck_imputer"]
-            output = deck_imputer.transform(output)
+        output = self.state_dependent_transformation(output, "age_imputer", Imputer("age", method="mean", group_col=["pclass", "sex", "title"]))
+        output = self.state_dependent_transformation(output, "sibsp_imputer", Imputer("sibsp", method="median"))
+        output = self.state_dependent_transformation(output, "parch_imputer", Imputer("parch", method="median"))
+        output = self.state_dependent_transformation(output, "embarked_imputer", Imputer("embarked", method="mode"))
+        output = self.state_dependent_transformation(output, "room_imputer", Imputer("room", method="median"))
+        output = self.state_dependent_transformation(output, "deck_imputer", Imputer("deck", method="static", target_value="N"))
 
         # Family size
         output["family_size"] = output["sibsp"] + output["parch"] + 1
@@ -194,51 +147,22 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         # Adjust fare by family size
         output["fare"] = output["fare"]/output["family_size"]
 
-        if "fare_imputer" not in self.state_dependent_transforms.keys():
-            fare_imputer = NAImputer("fare", group_col=["pclass", "deck"])
-            fare_imputer.fit(output)
-            output = fare_imputer.transform(output)
-            self.state_dependent_transforms["fare_imputer"] = fare_imputer
-        else:
-            fare_imputer = self.state_dependent_transforms["fare_imputer"]
-            output = fare_imputer.transform(output)
+        # Impute adjusted fare
+        output = self.state_dependent_transformation(output, "fare_imputer", Imputer("fare", group_col=["pclass", "deck"]))
 
         # Ensure string
         output["embarked"] = output["embarked"].astype(str)
         output["deck"] = output["deck"].astype(str)
 
         # One-hot Encode
-        if "one_hot_encode_title" not in self.state_dependent_transforms.keys():
-            title_lb = OneHotEncoder("title")
-            title_lb.fit(output)
-            output = title_lb.transform(output)
-            self.state_dependent_transforms["one_hot_encode_title"] = title_lb
-        else:
-            title_lb = self.state_dependent_transforms["one_hot_encode_title"]
-            output = title_lb.transform(output)
-
-        if "one_hot_encode_embarked" not in self.state_dependent_transforms.keys():
-            embark_lb = OneHotEncoder("embarked")
-            embark_lb.fit(output)
-            output = embark_lb.transform(output)
-            self.state_dependent_transforms["one_hot_encode_embarked"] = embark_lb
-        else:
-            embark_lb = self.state_dependent_transforms["one_hot_encode_embarked"]
-            output = embark_lb.transform(output)
-
-        if "one_hot_encode_deck" not in self.state_dependent_transforms.keys():
-            deck_lb = OneHotEncoder("deck")
-            deck_lb.fit(output)
-            output = deck_lb.transform(output)
-            self.state_dependent_transforms["one_hot_encode_deck"] = deck_lb
-        else:
-            deck_lb = self.state_dependent_transforms["one_hot_encode_deck"]
-            output = deck_lb.transform(output)
+        output = self.state_dependent_transformation(output, "one_hot_encode_title", OneHotEncoder("title"))
+        output = self.state_dependent_transformation(output, "one_hot_encode_deck", OneHotEncoder("deck"))
+        output = self.state_dependent_transformation(output, "one_hot_encode_embarked", OneHotEncoder("embarked"))
 
         # Drop columns
-        output.drop(columns=["name", "passengerid", "sex", "ticket", "cabin"],
-                    inplace=True)
+        output.drop(columns=["name", "passengerid", "sex", "ticket", "cabin"], inplace=True)
 
+        # Preserve column order
         if "column_order" not in self.state_dependent_transforms.keys():
             column_order = list(output.columns)
             self.state_dependent_transforms["column_order"] = column_order
@@ -249,16 +173,17 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output = output[column_order]
 
         # Scale features
-        if "standard_scaler" not in self.state_dependent_transforms.keys():
-            scaler = StandardScaler()
-            scaler.fit(output)
-            output = scaler.transform(output)
-            self.state_dependent_transforms["standard_scaler"] = scaler
-        else:
-            scaler = self.state_dependent_transforms["standard_scaler"]
-            output = scaler.transform(output)
+        output = self.state_dependent_transformation(output, "standard_scaler", StandardScaler())
 
         return output
+
+    def state_dependent_transformation(self, data, key, transform_obj=None):
+        if key not in self.state_dependent_transforms.keys():
+            transform_obj.fit(data)
+            self.state_dependent_transforms[key] = transform_obj
+            return transform_obj.transform(data)
+        else:
+            return self.state_dependent_transforms[key].transform(data)
 
     @staticmethod
     def get_title(x, title_dictionary=TITLE_DICTIONARY):
