@@ -38,8 +38,11 @@ class TuneModelParameters(ConfigurableTask):
         X_train = utils.load_data(self.input()['prepare_features']['X'].path)
         y_train = utils.load_data(self.input()['prepare_features']['y'].path)
 
+        if not self.model['estimators']:
+            raise Exception("Please provide list of estimators to train!")
+
         # Iterate over our models and our offset targets, performing the grid search to tune hyper-parameters
-        for model in self.model['sklearn_estimators']:
+        for model in self.model['estimators']:
             LOGGER.info('{}: Tuning model - {}'.format(repr(self), model["estimator"]))
 
             grid_search = self.do_grid_search(model, X_train, y_train)
@@ -93,28 +96,29 @@ class EnsembleVotingClassifier(ConfigurableTask):
     def run(self):
         [utils.create_folder(self.output()[x].path) for x in self.output().keys()]
 
-        # Read best models
-        best_models = utils.load_data(self.input()["cv"]["model_package"].path)
-        transformer = utils.load_data(self.input()["prepare_features"]["transformer"].path)
+        final_model_package = {}
 
-        # Read in X and y
-        X_train = utils.load_data(self.input()['prepare_features']['X'].path)
-        y_train = utils.load_data(self.input()['prepare_features']['y'].path)
+        if len(self.model["estimators"]) > 1:
+            # Read best models
+            best_models = utils.load_data(self.input()["cv"]["model_package"].path)
+            transformer = utils.load_data(self.input()["prepare_features"]["transformer"].path)
 
-        estimators = []
-        for model in best_models:
-            estimators.append((model["model"]["estimator_type"], model["best_model"]))
+            # Read in X and y
+            X_train = utils.load_data(self.input()['prepare_features']['X'].path)
+            y_train = utils.load_data(self.input()['prepare_features']['y'].path)
 
-        eclf = VotingClassifier(estimators=estimators, voting="soft")
+            estimators = []
+            for model in best_models:
+                estimators.append((model["model"]["estimator_type"], model["best_model"]))
 
-        LOGGER.info('{}: Fitting ensemble model '.format(repr(self)))
-        eclf.fit(X_train, y_train)
+            eclf = VotingClassifier(estimators=estimators, voting="soft")
 
-        # Package model
-        final_model_package = {
-            "transformer": transformer,
-            "final_model": eclf
-        }
+            LOGGER.info('{}: Fitting ensemble model '.format(repr(self)))
+            eclf.fit(X_train, y_train)
+
+            # Package model
+            final_model_package["transformer"] = transformer
+            final_model_package["final_model"] = eclf
 
         # Save ensemble model
         utils.save_data(final_model_package, self.output()["ensemble_model"].path)

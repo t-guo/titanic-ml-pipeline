@@ -28,6 +28,7 @@ TITLE_DICTIONARY = {
 
 LOGGER = logging.getLogger('luigi-interface')
 
+
 class CustomizableTransformer(BaseEstimator, TransformerMixin):
 
     def __init__(self):
@@ -101,7 +102,6 @@ class NAImputer(BaseEstimator, TransformerMixin):
             all_data = pd.merge(output, self.group_values_df, how='left', on=self.group_col, suffixes=['', '_imputed'])
             idx = pd.isnull(output[self.target_col])
             output.loc[idx, self.target_col] = all_data.loc[idx, self.target_col + "_imputed"]
-
         else:
             output[self.target_col] = output[self.target_col].fillna(self.target_value)
 
@@ -111,7 +111,6 @@ class NAImputer(BaseEstimator, TransformerMixin):
 class TitanicFeatureTransformer(CustomizableTransformer):
 
     def transform(self, data):
-
         output = data.copy()
 
         # Rename columns to lower_case

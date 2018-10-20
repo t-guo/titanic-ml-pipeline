@@ -4,7 +4,7 @@ import os
 
 import pipeline.utils as utils
 from luigi_extension import ConfigurableTask
-from pipeline.titanic_data_transformation import TitanicFeatureTransformer
+from pipeline.data_transformation import TitanicFeatureTransformer
 from pipeline.tasks.build_tasks import LogBuildName
 
 

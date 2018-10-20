@@ -29,25 +29,25 @@ class Predict(ConfigurableTask):
 
         # Read prediction data
         pred_data = utils.load_data("data/test.csv")
-
         predict_folder = os.path.dirname(self.output()["predictions"].path)
 
-        # Read model and transform data
+        # Read models and transform data
+        best_individual_models = utils.load_data(self.input()["cv"]["model_package"].path)
         final_model = utils.load_data(self.input()["ensemble_clf"]["ensemble_model"].path)
         transformer = final_model["transformer"]
         X_pred_transformed = transformer.transform(pred_data)
 
-        best_model = utils.load_data(self.input()["cv"]["model_package"].path)
-        for m in best_model:
+        for m in best_individual_models:
             clf = m["best_model"]
             prediction_df = self.make_prediction(clf, X_pred_transformed, pred_data["PassengerId"])
             utils.save_data(prediction_df,
                             os.path.join(predict_folder,
                                          m["model"]["estimator_type"] + "_" + str(m["best_score"]) + ".csv"))
 
-        eclf = final_model["final_model"]
-        prediction_df = self.make_prediction(eclf, X_pred_transformed, pred_data["PassengerId"])
-        utils.save_data(prediction_df, os.path.join(predict_folder, "ensemble.csv"))
+        if len(self.model["estimators"]) > 1:
+            eclf = final_model["final_model"]
+            prediction_df = self.make_prediction(eclf, X_pred_transformed, pred_data["PassengerId"])
+            utils.save_data(prediction_df, os.path.join(predict_folder, "EnsembleClassifier.csv"))
 
         utils.save_data("", self.output()["predictions"].path)
 
