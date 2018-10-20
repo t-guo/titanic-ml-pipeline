@@ -8,7 +8,7 @@ log_level: "INFO"
 
 # Models
 n_folds: 5
-sklearn_estimators:
+estimators:
   -
     estimator_type: "RandomForestClassifier"
     estimator: "sklearn.ensemble.RandomForestClassifier"
@@ -50,3 +50,14 @@ sklearn_estimators:
       n_estimators: [2, 5, 10, 20, 50]
       algorithm: ["SAMME","SAMME.R"]
       learning_rate: [0.0001, 0.001, 0.01, 0.1, 0.2]
+
+  -
+    estimator_type: "XGBClassifier"
+    estimator: "xgboost.XGBClassifier"
+    scorer: "accuracy"
+    parameter_values:
+      min_child_weight: [1, 5, 10]
+      gamma: [0.5, 1, 1.5, 2, 5]
+      subsample: [0.6, 0.8, 1.0]
+      colsample_bytree: [0.6, 0.8, 1.0]
+      max_depth: [3, 4, 5]
