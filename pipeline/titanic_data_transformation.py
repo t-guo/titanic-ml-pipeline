@@ -11,6 +11,7 @@ TITLE_DICTIONARY = {
     "Major": "Officer",
     "Jonkheer": "Royalty",
     "Don": "Royalty",
+    "Dona": "Royalty",
     "Sir": "Royalty",
     "Dr": "Officer",
     "Rev": "Officer",
