@@ -1,12 +1,13 @@
 # Pipeline configuration.
 data_repository: "results"
+build_description: "with grouped imputation and feature scaling, using most features and StratifiedKFold"
 
 luigi_worker_count: 3
 local_scheduler: true
 log_level: "INFO"
 
 # Models
-n_folds: 3
+n_folds: 5
 sklearn_estimators:
   -
     estimator_type: "RandomForestClassifier"
@@ -14,11 +15,11 @@ sklearn_estimators:
     scorer: "accuracy"
     parameter_values:
       criterion: ["gini", "entropy"]
-      n_estimators: [100, 300, 400, 500, 700]
+      n_estimators: [100, 300, 500, 700]
       min_samples_split: [10, 20]
       min_samples_leaf: [5, 8, 10]
       min_impurity_decrease: [0, 0.05]
-      max_depth: [3, 5, 10]
+      max_depth: [3, 5, 8]
 
   -
     estimator_type: "GradientBoostingClassifier"
@@ -48,4 +49,4 @@ sklearn_estimators:
     parameter_values:
       n_estimators: [2, 5, 10, 20, 50]
       algorithm: ["SAMME","SAMME.R"]
-      learning_rate:  [0.0001, 0.001, 0.01, 0.1, 0.2, 0.3]
+      learning_rate: [0.0001, 0.001, 0.01, 0.1, 0.2]

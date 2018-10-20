@@ -7,6 +7,7 @@ import luigi
 import pipeline.utils as utils
 from luigi_extension import ConfigurableTask
 
+from pipeline.tasks.build_tasks import LogBuildName
 from pipeline.tasks.data_process_tasks import FeatureProcess
 from pipeline.tasks.training_tasks import TuneModelParameters, EnsembleVotingClassifier
 from pipeline.tasks.prediction_tasks import Predict
@@ -23,6 +24,7 @@ LOGGER = logging.getLogger(LOGGER_NAME)
 
 def create_task_list():
     tasks = []
+    tasks.append(LogBuildName())
     tasks.append(FeatureProcess())
     tasks.append(TuneModelParameters())
     tasks.append(EnsembleVotingClassifier())

@@ -5,12 +5,18 @@ import os
 import pipeline.utils as utils
 from luigi_extension import ConfigurableTask
 from pipeline.titanic_data_transformation import TitanicFeatureTransformer
+from pipeline.tasks.build_tasks import LogBuildName
 
 
 LOGGER = logging.getLogger('luigi-interface')
 
 
 class FeatureProcess(ConfigurableTask):
+
+    def requires(self):
+        return {
+            "log_name": LogBuildName()
+        }
 
     def output(self):
         return {

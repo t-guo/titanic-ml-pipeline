@@ -1,9 +1,31 @@
 import numpy as np
 import pandas as pd
+import logging
 
 from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import LabelBinarizer, StandardScaler
 
+TITLE_DICTIONARY = {
+    "Capt": "Officer",
+    "Col": "Officer",
+    "Major": "Officer",
+    "Jonkheer": "Royalty",
+    "Don": "Royalty",
+    "Sir": "Royalty",
+    "Dr": "Officer",
+    "Rev": "Officer",
+    "the Countess": "Royalty",
+    "Mme": "Mrs",
+    "Mlle": "Miss",
+    "Ms": "Mrs",
+    "Mr": "Mr",
+    "Mrs": "Mrs",
+    "Miss": "Miss",
+    "Master": "Master",
+    "Lady": "Royalty"
+}
+
+LOGGER = logging.getLogger('luigi-interface')
 
 class CustomizableTransformer(BaseEstimator, TransformerMixin):
 
@@ -42,25 +64,45 @@ class OneHotEncoder(BaseEstimator, TransformerMixin):
 
 
 class NAImputer(BaseEstimator, TransformerMixin):
-    def __init__(self, target_col, method="mean", target_value=None):
+    def __init__(self, target_col, method="mean", target_value=None, group_col=None):
         self.target_col = target_col
         self.target_value = target_value
         self.method = method
+        self.group_values_df = None
+        self.group_col = group_col
 
     def fit(self, data):
-        if self.target_value is None:
-            if self.method == "mean":
-                self.target_value = data[self.target_col].mean()
-            elif self.method == "median":
-                self.target_value = data[self.target_col].median()
-            elif self.method == "mode":
-                self.target_value = data[self.target_col].mode()
-            else:
-                raise NotImplementedError("Method not implemented, must be one of ['mean', 'mode', 'static']")
+        if self.group_col:
+            if self.group_values_df is None:
+                if self.method == "mean":
+                    self.group_values_df = data.groupby(self.group_col)[self.target_col].mean().reset_index()
+                elif self.method == "median":
+                    self.group_values_df = data.groupby(self.group_col)[self.target_col].median().reset_index()
+                elif self.method == "mode":
+                    self.group_values_df = data.groupby(self.group_col)[self.target_col].mode().reset_index()
+                else:
+                    raise NotImplementedError("Method not implemented, must be one of ['mean', 'mode', 'static']")
+        else:
+            if self.target_value is None:
+                if self.method == "mean":
+                    self.target_value = data[self.target_col].mean()
+                elif self.method == "median":
+                    self.target_value = data[self.target_col].median()
+                elif self.method == "mode":
+                    self.target_value = data[self.target_col].mode()[0]
+                else:
+                    raise NotImplementedError("Method not implemented, must be one of ['mean', 'mode', 'static']")
 
     def transform(self, data):
         output = data.copy()
-        output[self.target_col] = output[self.target_col].fillna(self.target_value)
+
+        if self.group_col:
+            all_data = pd.merge(output, self.group_values_df, how='left', on=self.group_col, suffixes=['', '_imputed'])
+            idx = pd.isnull(output[self.target_col])
+            output.loc[idx, self.target_col] = all_data.loc[idx, self.target_col + "_imputed"]
+
+        else:
+            output[self.target_col] = output[self.target_col].fillna(self.target_value)
 
         return output
 
@@ -88,7 +130,7 @@ class TitanicFeatureTransformer(CustomizableTransformer):
 
         # Impute variables
         if "age_imputer" not in self.state_dependent_transforms.keys():
-            age_imputer = NAImputer("age", method="median")
+            age_imputer = NAImputer("age", method="mean", group_col=["pclass", "sex", "title"])
             age_imputer.fit(output)
             output = age_imputer.transform(output)
             self.state_dependent_transforms["age_imputer"] = age_imputer
@@ -96,17 +138,8 @@ class TitanicFeatureTransformer(CustomizableTransformer):
             age_imputer = self.state_dependent_transforms["age_imputer"]
             output = age_imputer.transform(output)
 
-        if "fare_imputer" not in self.state_dependent_transforms.keys():
-            fare_imputer = NAImputer("fare")
-            fare_imputer.fit(output)
-            output = fare_imputer.transform(output)
-            self.state_dependent_transforms["fare_imputer"] = fare_imputer
-        else:
-            fare_imputer = self.state_dependent_transforms["fare_imputer"]
-            output = fare_imputer.transform(output)
-
         if "sibsp_imputer" not in self.state_dependent_transforms.keys():
-            sibsp_imputer = NAImputer("sibsp")
+            sibsp_imputer = NAImputer("sibsp", method="median")
             sibsp_imputer.fit(output)
             output = sibsp_imputer.transform(output)
             self.state_dependent_transforms["sibsp_imputer"] = sibsp_imputer
@@ -115,7 +148,7 @@ class TitanicFeatureTransformer(CustomizableTransformer):
             output = sibsp_imputer.transform(output)
 
         if "parch_imputer" not in self.state_dependent_transforms.keys():
-            parch_imputer = NAImputer("parch")
+            parch_imputer = NAImputer("parch", method="median")
             parch_imputer.fit(output)
             output = parch_imputer.transform(output)
             self.state_dependent_transforms["parch_imputer"] = parch_imputer
@@ -142,13 +175,33 @@ class TitanicFeatureTransformer(CustomizableTransformer):
             output = room_imputer.transform(output)
 
         if "deck_imputer" not in self.state_dependent_transforms.keys():
-            deck_imputer = NAImputer("deck", method="mode")
+            deck_imputer = NAImputer("deck", method="static", target_value="N")
             deck_imputer.fit(output)
             output = deck_imputer.transform(output)
             self.state_dependent_transforms["deck_imputer"] = deck_imputer
         else:
             deck_imputer = self.state_dependent_transforms["deck_imputer"]
             output = deck_imputer.transform(output)
+
+        # Family size
+        output["family_size"] = output["sibsp"] + output["parch"] + 1
+
+        # introducing other features based on the family size
+        output['single'] = output['family_size'].map(lambda s: 1 if s == 1 else 0)
+        output['small_family'] = output['family_size'].map(lambda s: 1 if 2 <= s <= 4 else 0)
+        output['large_family'] = output['family_size'].map(lambda s: 1 if 5 <= s else 0)
+
+        # Adjust fare by family size
+        output["fare"] = output["fare"]/output["family_size"]
+
+        if "fare_imputer" not in self.state_dependent_transforms.keys():
+            fare_imputer = NAImputer("fare", group_col=["pclass", "deck"])
+            fare_imputer.fit(output)
+            output = fare_imputer.transform(output)
+            self.state_dependent_transforms["fare_imputer"] = fare_imputer
+        else:
+            fare_imputer = self.state_dependent_transforms["fare_imputer"]
+            output = fare_imputer.transform(output)
 
         # Ensure string
         output["embarked"] = output["embarked"].astype(str)
@@ -182,19 +235,33 @@ class TitanicFeatureTransformer(CustomizableTransformer):
             deck_lb = self.state_dependent_transforms["one_hot_encode_deck"]
             output = deck_lb.transform(output)
 
-        # Lone passenger
-        output["lone"] = 0
-        output.loc[(output["sibsp"] + output["parch"] < 1), "lone"] = 1
+        # Drop columns
+        output.drop(columns=["name", "passengerid", "sex", "ticket", "cabin"],
+                    inplace=True)
 
-        output.drop(columns=["name", "passengerid", "sex", "ticket", "cabin"], inplace=True)
+        if "column_order" not in self.state_dependent_transforms.keys():
+            column_order = list(output.columns)
+            self.state_dependent_transforms["column_order"] = column_order
+        else:
+            column_order = self.state_dependent_transforms["column_order"]
 
-        return output.reset_index(drop=True)
+        LOGGER.info("Column order: {}".format(",".join(column_order)))
+        output = output[column_order]
+
+        # Scale features
+        if "standard_scaler" not in self.state_dependent_transforms.keys():
+            scaler = StandardScaler()
+            scaler.fit(output)
+            output = scaler.transform(output)
+            self.state_dependent_transforms["standard_scaler"] = scaler
+        else:
+            scaler = self.state_dependent_transforms["standard_scaler"]
+            output = scaler.transform(output)
+
+        return output
 
     @staticmethod
-    def get_title(x):
+    def get_title(x, title_dictionary=TITLE_DICTIONARY):
         title = x.split(",")[1].split(".")[0].strip()
 
-        if title.lower() not in ['capt', 'dr', 'major', 'master', 'miss', 'mr', 'mrs', 'ms', 'sir']:
-            title = "other"
-
-        return title.lower()
+        return title_dictionary[title].lower()

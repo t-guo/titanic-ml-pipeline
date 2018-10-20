@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 from sklearn.model_selection import GridSearchCV
-from sklearn.model_selection import StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedKFold
 from sklearn.ensemble import VotingClassifier
 
 import pipeline.utils as utils
@@ -46,6 +46,11 @@ class TuneModelParameters(ConfigurableTask):
             self.best_model_per_model_type(model, grid_search)
 
         # Save best models
+        for best_model in self.best_estimator_per_model:
+            LOGGER.info('{}: BEST {} - {}'.format(repr(self),
+                                                  best_model["model"]["estimator_type"],
+                                                  str(best_model["best_score"])))
+
         utils.save_data(self.best_estimator_per_model, self.output()['model_package'].path)
 
     def do_grid_search(self, model_config, X_train, y_train):
@@ -55,7 +60,7 @@ class TuneModelParameters(ConfigurableTask):
         # Pull out parameters and names
         param_grid = model_config['parameter_values']
 
-        cv = StratifiedShuffleSplit(n_splits=self.model["n_folds"])
+        cv = StratifiedKFold(n_splits=self.model["n_folds"])
         grid_search = GridSearchCV(estimator=clf, param_grid=param_grid, cv=cv, n_jobs=1, refit=True,
                                    scoring=model_config["scorer"], verbose=4, return_train_score=True, iid=False)
 
@@ -98,7 +103,7 @@ class EnsembleVotingClassifier(ConfigurableTask):
 
         estimators = []
         for model in best_models:
-            estimators.append((str(model["model"]["estimator"]), model["best_model"]))
+            estimators.append((model["model"]["estimator_type"], model["best_model"]))
 
         eclf = VotingClassifier(estimators=estimators, voting="soft")
 
