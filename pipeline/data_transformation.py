@@ -144,6 +144,9 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output['small_family'] = output['family_size'].map(lambda s: 1 if 2 <= s <= 4 else 0)
         output['large_family'] = output['family_size'].map(lambda s: 1 if 5 <= s else 0)
 
+        # Child
+        output["child"] = output["age"].map(lambda s: 1 if s < 18 else 0)
+
         # Adjust fare by family size
         output["fare"] = output["fare"]/output["family_size"]
 

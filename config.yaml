@@ -1,6 +1,6 @@
 # Pipeline configuration.
 data_repository: "results"
-build_description: "with grouped imputation and feature scaling, using most features and StratifiedKFold"
+build_description: "with grouped imputation, using most features and StratifiedKFold"
 
 luigi_worker_count: 3
 local_scheduler: true
@@ -15,11 +15,11 @@ estimators:
     scorer: "accuracy"
     parameter_values:
       criterion: ["gini", "entropy"]
-      n_estimators: [100, 300, 500, 700]
-      min_samples_split: [10, 20]
-      min_samples_leaf: [5, 8, 10]
+      n_estimators: [100, 200, 300, 400, 500, 700]
+      min_samples_split: [5, 10]
+      min_samples_leaf: [5, 8]
       min_impurity_decrease: [0, 0.05]
-      max_depth: [3, 5, 8]
+      max_depth: [3, 4, 5, 6]
 
   -
     estimator_type: "GradientBoostingClassifier"
