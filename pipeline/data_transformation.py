@@ -126,6 +126,10 @@ class TitanicFeatureTransformer(CustomizableTransformer):
 
         # Extract and impute cabin info
         output["deck"] = output["cabin"].str.slice(0, 1)
+        output.loc[(output["deck"] == "A") | (output["deck"] == "B"), "deck"] = "upper"
+        output.loc[(output["deck"] == "C") | (output["deck"] == "D"), "deck"] = "middle"
+        output.loc[(output["deck"] != "upper") & (output["deck"] != "middle") & ~pd.isnull(output["deck"]), "deck"] = "lower"
+
         output["room"] = output["cabin"].str.slice(1, 5).str.extract("([0-9]+)", expand=False).astype("float")
 
         # Impute variables
@@ -134,7 +138,7 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output = self.state_dependent_transformation(output, "parch_imputer", Imputer("parch", method="median"))
         output = self.state_dependent_transformation(output, "embarked_imputer", Imputer("embarked", method="mode"))
         output = self.state_dependent_transformation(output, "room_imputer", Imputer("room", method="median"))
-        output = self.state_dependent_transformation(output, "deck_imputer", Imputer("deck", method="static", target_value="N"))
+        output = self.state_dependent_transformation(output, "deck_imputer", Imputer("deck", method="static", target_value="unknown"))
 
         # Family size
         output["family_size"] = output["sibsp"] + output["parch"] + 1
@@ -145,7 +149,7 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output['large_family'] = output['family_size'].map(lambda s: 1 if 5 <= s else 0)
 
         # Child
-        output["child"] = output["age"].map(lambda s: 1 if s < 18 else 0)
+        output["child"] = output["age"].map(lambda s: 1 if s < 16 else 0)
 
         # Adjust fare by family size
         output["fare"] = output["fare"]/output["family_size"]

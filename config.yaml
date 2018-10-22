@@ -15,11 +15,11 @@ estimators:
     scorer: "accuracy"
     parameter_values:
       criterion: ["gini", "entropy"]
-      n_estimators: [100, 200, 300, 400, 500, 700]
-      min_samples_split: [5, 10]
-      min_samples_leaf: [5, 8]
+      n_estimators: [100, 200, 300, 400, 500]
+      min_samples_split: [5, 8, 10]
+      min_samples_leaf: [3, 5]
       min_impurity_decrease: [0, 0.05]
-      max_depth: [3, 4, 5, 6]
+      max_depth: [3, 4, 5]
 
   -
     estimator_type: "GradientBoostingClassifier"
@@ -39,7 +39,13 @@ estimators:
     scorer: "accuracy"
     parameter_values:
       activation: ["relu", "logistic"]
-      solver: ["adam", "sgd", "lbfgs"]
+      solver:
+        #  -
+        #    estimator_type: "MLPClassifier"
+        #    estimator: "sklearn.neural_network.MLPClassifier"
+        #    scorer: "accuracy"
+      #    parameter_values:
+      #      activa ["adam", "sgd", "lbfgs"]
       alpha: [0.0001, 0.0002, 0.0005, 0.001, 0.005]
 
   -
