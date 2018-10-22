@@ -4,7 +4,7 @@ A machine learning pipeline for Kaggle's [Titanic problem](https://www.kaggle.co
 ## Execution
 Run ```pipeline\main.py``` to execute pipeline. 
 
-```train.csv``` and ```test.csv``` goes under ```data\```.
+Put ```train.csv``` and ```test.csv``` goes under ```data\```. Edit ```config.yaml`` for different experiments.
 
 ## Results
 ~86% CV accuracy.
