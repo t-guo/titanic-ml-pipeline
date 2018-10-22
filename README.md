@@ -9,6 +9,6 @@ Put ```train.csv``` and ```test.csv``` goes under ```data\```. Edit ```config.ya
 ## Results
 ~86% CV accuracy.
 
-Best public test score: 81%
+Best public test score: 81%.
 
 
