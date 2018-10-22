@@ -148,8 +148,13 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output['small_family'] = output['family_size'].map(lambda s: 1 if 2 <= s <= 4 else 0)
         output['large_family'] = output['family_size'].map(lambda s: 1 if 5 <= s else 0)
 
-        # Child
-        output["child"] = output["age"].map(lambda s: 1 if s < 16 else 0)
+        # Bin age
+        output.loc[(output['age'] > 5) & (output['age'] <= 12), 'age'] = 1  # Child
+        output.loc[(output['age'] > 12) & (output['age'] <= 18), 'age'] = 2  # Teenager
+        output.loc[(output['age'] > 18) & (output['age'] <= 24), 'age'] = 3  # Student
+        output.loc[(output['age'] > 24) & (output['age'] <= 35), 'age'] = 4  # Young Adult
+        output.loc[(output['age'] > 35) & (output['age'] <= 60), 'age'] = 5  # Adult
+        output.loc[output['age'] > 60, 'age'] = 6  # Senior
 
         # Adjust fare by family size
         output["fare"] = output["fare"]/output["family_size"]
@@ -167,7 +172,7 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output = self.state_dependent_transformation(output, "one_hot_encode_embarked", OneHotEncoder("embarked"))
 
         # Drop columns
-        output.drop(columns=["name", "passengerid", "sex", "ticket", "cabin"], inplace=True)
+        output.drop(columns=["name", "passengerid", "sex", "ticket", "cabin", "sibsp", "parch"], inplace=True)
 
         # Preserve column order
         if "column_order" not in self.state_dependent_transforms.keys():
