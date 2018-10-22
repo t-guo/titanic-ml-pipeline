@@ -1,5 +1,5 @@
-# titanic-ml-pipeline
-A machine learning pipeline for Kaggle's [Titanic problem](https://www.kaggle.com/c/titanic).
+# Titanic Machine Learning Pipeline
+A simple machine learning pipeline for Kaggle's [Titanic problem](https://www.kaggle.com/c/titanic).
 
 ## Execution
 Run ```pipeline\main.py``` to execute pipeline. 
