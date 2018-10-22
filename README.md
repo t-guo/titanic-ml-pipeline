@@ -1,4 +1,3 @@
-# Titanic Machine Learning Pipeline
 A simple machine learning pipeline for Kaggle's [Titanic problem](https://www.kaggle.com/c/titanic).
 
 ## Execution
