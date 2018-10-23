@@ -12,7 +12,7 @@ A simple machine learning pipeline for Kaggle's [Titanic problem](https://www.ka
 
 ## Pipeline
 Configuration based modeling workflow.
-##### Tasks:
+#### Tasks:
 1. Feature Engineering
     * Data cleaning and imputation
     * Feature extraction
