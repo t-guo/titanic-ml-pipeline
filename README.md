@@ -31,8 +31,8 @@ Run ```pipeline\main.py``` to execute pipeline.
 Put ```train.csv``` and ```test.csv``` goes under ```data\```. Edit ```config.yaml``` for different experiments.
 
 ## Results
-~83% CV accuracy.
+~83% CV accuracy. 
 
-Best public test score: 81%.
+Best public test score: 82%.
 
 
