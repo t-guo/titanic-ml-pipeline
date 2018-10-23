@@ -17,7 +17,7 @@ Configuration based modeling workflow.
     * Data cleaning and imputation
     * Feature extraction
     * Encoding categorical variables 
-    * Feature selection with supported [sklearn feature selection estimator](http://scikit-learn.org/stable/modules/feature_selection.html)
+    * Feature selection with supported [sklearn feature selection estimator](http://scikit-learn.org/stable/modules/feature_selection.html) *(NOTE: adding feature selection will reduce cv accuracy, but it reduces overfitting and tends to improve kaggle score on the test set)*
 2. Modeling
     * Grid Search with cross validation on specified estimators
     * Ensemble best model from each estimator
