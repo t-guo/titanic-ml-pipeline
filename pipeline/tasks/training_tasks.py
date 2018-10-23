@@ -8,7 +8,7 @@ from sklearn.ensemble import VotingClassifier
 
 import pipeline.utils as utils
 from luigi_extension import ConfigurableTask
-from pipeline.tasks.data_process_tasks import FeatureProcess
+from pipeline.tasks.feature_engineering_tasks import FeatureProcess, FeatureSelection
 
 LOGGER = logging.getLogger('luigi-interface')
 
@@ -20,7 +20,8 @@ class TuneModelParameters(ConfigurableTask):
 
     def requires(self):
         return {
-            'prepare_features': FeatureProcess()
+            'prepare_features': FeatureProcess(),
+            'select_features': FeatureSelection()
         }
 
     def output(self):
@@ -34,7 +35,7 @@ class TuneModelParameters(ConfigurableTask):
         [utils.create_folder(self.output()[x].path) for x in self.output().keys()]
 
         # Read in X and y
-        X_train = utils.load_data(self.input()['prepare_features']['X'].path)
+        X_train = utils.load_data(self.input()['select_features']['X_train_filtered'].path)
         y_train = utils.load_data(self.input()['prepare_features']['y'].path)
 
         if not self.model['estimators']:
@@ -82,6 +83,7 @@ class EnsembleVotingClassifier(ConfigurableTask):
 
     def requires(self):
         return {
+            'select_features': FeatureSelection(),
             'prepare_features': FeatureProcess(),
             'cv': TuneModelParameters()
         }
@@ -100,10 +102,9 @@ class EnsembleVotingClassifier(ConfigurableTask):
         if len(self.model["estimators"]) > 1:
             # Read best models
             best_models = utils.load_data(self.input()["cv"]["model_package"].path)
-            transformer = utils.load_data(self.input()["prepare_features"]["transformer"].path)
 
             # Read in X and y
-            X_train = utils.load_data(self.input()['prepare_features']['X'].path)
+            X_train = utils.load_data(self.input()['select_features']['X_train_filtered'].path)
             y_train = utils.load_data(self.input()['prepare_features']['y'].path)
 
             estimators = []
@@ -116,7 +117,6 @@ class EnsembleVotingClassifier(ConfigurableTask):
             eclf.fit(X_train, y_train)
 
             # Package model
-            final_model_package["transformer"] = transformer
             final_model_package["final_model"] = eclf
 
         # Save ensemble model

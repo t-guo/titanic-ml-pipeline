@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import logging
+from scipy import stats
 
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.preprocessing import LabelBinarizer, StandardScaler
@@ -27,15 +28,6 @@ TITLE_DICTIONARY = {
 }
 
 LOGGER = logging.getLogger('luigi-interface')
-
-
-class CustomizableTransformer(BaseEstimator, TransformerMixin):
-
-    def __init__(self):
-        self.state_dependent_transforms = {}
-
-    def fit(self, data, target=None):
-        pass
 
 
 class OneHotEncoder(BaseEstimator, TransformerMixin):
@@ -81,7 +73,8 @@ class Imputer(BaseEstimator, TransformerMixin):
                 elif self.method == "median":
                     self.group_values_df = data.groupby(self.group_col)[self.target_col].median().reset_index()
                 elif self.method == "mode":
-                    self.group_values_df = data.groupby(self.group_col)[self.target_col].mode().reset_index()
+                    self.group_values_df = data.groupby(self.group_col).agg({self.target_col: lambda x: stats.mode(x)[0]}).reset_index()
+                    self.group_values_df = self.group_values_df.replace(0, np.nan)
                 else:
                     raise NotImplementedError("Method not implemented, must be one of ['mean', 'mode', 'static']")
         else:
@@ -108,10 +101,12 @@ class Imputer(BaseEstimator, TransformerMixin):
         return output
 
 
-class TitanicFeatureTransformer(CustomizableTransformer):
+class TitanicFeatureTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self):
+        self.state_dependent_transforms = {}
 
-    def transform(self, data):
-        output = data.copy()
+    def fit_transform(self, X, y=None, **fit_params):
+        output = X.copy()
 
         # Rename columns to lower_case
         output.columns = [x.lower() for x in output.columns]
@@ -138,10 +133,17 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output = self.state_dependent_transformation(output, "parch_imputer", Imputer("parch", method="median"))
         output = self.state_dependent_transformation(output, "embarked_imputer", Imputer("embarked", method="mode"))
         output = self.state_dependent_transformation(output, "room_imputer", Imputer("room", method="median"))
-        output = self.state_dependent_transformation(output, "deck_imputer", Imputer("deck", method="static", target_value="unknown"))
+        output = self.state_dependent_transformation(output, "deck_imputer_1", Imputer("deck", method="mode", group_col=["ticket"]))
+        output = self.state_dependent_transformation(output, "deck_imputer_2", Imputer("deck", method="static", target_value="unknown"))
 
         # Family size
         output["family_size"] = output["sibsp"] + output["parch"] + 1
+
+        # Group size
+        group_size = output.groupby("ticket")["passengerid"].count().reset_index()
+        group_size.columns = ["ticket", "group_size"]
+        output = pd.merge(output, group_size, how="left", on="ticket")
+        output["group_size"] = output[['group_size', 'family_size']].max(axis=1)
 
         # introducing other features based on the family size
         output['single'] = output['family_size'].map(lambda s: 1 if s == 1 else 0)
@@ -156,8 +158,8 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output.loc[(output['age'] > 35) & (output['age'] <= 60), 'age'] = 5  # Adult
         output.loc[output['age'] > 60, 'age'] = 6  # Senior
 
-        # Adjust fare by family size
-        output["fare"] = output["fare"]/output["family_size"]
+        # Adjust fare by group size
+        output["fare"] = output["fare"]/output["group_size"]
 
         # Impute adjusted fare
         output = self.state_dependent_transformation(output, "fare_imputer", Imputer("fare", group_col=["pclass", "deck"]))
@@ -172,7 +174,7 @@ class TitanicFeatureTransformer(CustomizableTransformer):
         output = self.state_dependent_transformation(output, "one_hot_encode_embarked", OneHotEncoder("embarked"))
 
         # Drop columns
-        output.drop(columns=["name", "passengerid", "sex", "ticket", "cabin", "sibsp", "parch"], inplace=True)
+        output.drop(columns=["name", "passengerid", "sex", "ticket", "cabin"], inplace=True)
 
         # Preserve column order
         if "column_order" not in self.state_dependent_transforms.keys():
@@ -196,6 +198,12 @@ class TitanicFeatureTransformer(CustomizableTransformer):
             return transform_obj.transform(data)
         else:
             return self.state_dependent_transforms[key].transform(data)
+
+    def get_column_order(self):
+        if "column_order" in self.state_dependent_transforms:
+            return self.state_dependent_transforms["column_order"]
+        else:
+            return None
 
     @staticmethod
     def get_title(x, title_dictionary=TITLE_DICTIONARY):

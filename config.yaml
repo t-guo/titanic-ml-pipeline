@@ -6,6 +6,13 @@ luigi_worker_count: 3
 local_scheduler: true
 log_level: "INFO"
 
+# Feature Selection
+feature_selection:
+  estimator: "sklearn.svm.LinearSVC"
+  parameter_values:
+    penalty: "l1"
+    dual: False
+
 # Models
 n_folds: 5
 estimators:

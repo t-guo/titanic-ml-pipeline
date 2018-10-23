@@ -8,12 +8,11 @@ import pipeline.utils as utils
 from luigi_extension import ConfigurableTask
 
 from pipeline.tasks.build_tasks import LogBuildName
-from pipeline.tasks.data_process_tasks import FeatureProcess
+from pipeline.tasks.feature_engineering_tasks import FeatureProcess, FeatureSelection
 from pipeline.tasks.training_tasks import TuneModelParameters, EnsembleVotingClassifier
 from pipeline.tasks.prediction_tasks import Predict
 
 
-# config locations
 MODEL_CONFIGS_DIR = utils.absolute_path_from_project_root(os.path.join('config.yaml'))
 CONFIG_HASH_LENGTH = 9
 LOGGER_NAME = 'luigi-interface'
@@ -26,6 +25,7 @@ def create_task_list():
     tasks = []
     tasks.append(LogBuildName())
     tasks.append(FeatureProcess())
+    tasks.append(FeatureSelection())
     tasks.append(TuneModelParameters())
     tasks.append(EnsembleVotingClassifier())
     tasks.append(Predict())
@@ -54,7 +54,7 @@ def make_data_repository(data_repository, config_id):
 def main():
     model_config = get_job_configuration()
 
-    print "Config ID: {}".format(model_config["config_id"])
+    print("Config ID: {}".format(model_config["config_id"]))
 
     # initialize data repository
     model_config["data_repository"] = make_data_repository(
@@ -81,7 +81,8 @@ def main():
         tasks,
         local_scheduler=model_config["local_scheduler"],
         workers=model_config["luigi_worker_count"],
-        log_level=model_config["log_level"])
+        log_level=model_config["log_level"]
+    )
 
     success = all([task.complete() for task in tasks])
     return success

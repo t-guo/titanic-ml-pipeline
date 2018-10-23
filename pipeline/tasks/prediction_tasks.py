@@ -6,6 +6,7 @@ import pandas as pd
 import pipeline.utils as utils
 from luigi_extension import ConfigurableTask
 from pipeline.tasks.training_tasks import EnsembleVotingClassifier, TuneModelParameters
+from pipeline.tasks.feature_engineering_tasks import FeatureSelection
 
 LOGGER = logging.getLogger('luigi-interface')
 
@@ -15,7 +16,8 @@ class Predict(ConfigurableTask):
     def requires(self):
         return {
             "ensemble_clf": EnsembleVotingClassifier(),
-            "cv": TuneModelParameters()
+            "cv": TuneModelParameters(),
+            "select_features": FeatureSelection()
         }
 
     def output(self):
@@ -34,12 +36,11 @@ class Predict(ConfigurableTask):
         # Read models and transform data
         best_individual_models = utils.load_data(self.input()["cv"]["model_package"].path)
         final_model = utils.load_data(self.input()["ensemble_clf"]["ensemble_model"].path)
-        transformer = final_model["transformer"]
-        X_pred_transformed = transformer.transform(pred_data)
+        X_test_filtered = utils.load_data(self.input()["select_features"]["X_test_filtered"].path)
 
         for m in best_individual_models:
             clf = m["best_model"]
-            prediction_df = self.make_prediction(clf, X_pred_transformed, pred_data["PassengerId"])
+            prediction_df = self.make_prediction(clf, X_test_filtered, pred_data["PassengerId"])
 
             utils.save_data(
                 prediction_df,
@@ -48,7 +49,7 @@ class Predict(ConfigurableTask):
 
         if len(self.model["estimators"]) > 1:
             eclf = final_model["final_model"]
-            prediction_df = self.make_prediction(eclf, X_pred_transformed, pred_data["PassengerId"])
+            prediction_df = self.make_prediction(eclf, X_test_filtered, pred_data["PassengerId"])
 
             utils.save_data(prediction_df, os.path.join(predict_folder, "EnsembleClassifier.csv"))
 
